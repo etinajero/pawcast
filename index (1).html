@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pawcast — trailhead weather briefing</title>
+<meta name="description" content="A quick weather briefing for you and your dog: current temp, whether you need a raincoat, and whether it's safe to walk." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#23291F;
+    --paper:#EFE8D6;
+    --paper-raised:#F8F3E6;
+    --green:#2F5233;
+    --green-soft:#E4EBDD;
+    --gold:#D9A441;
+    --gold-soft:#F6E9CE;
+    --brick:#B5482B;
+    --brick-soft:#F3DED3;
+    --steel:#3E6B8A;
+    --steel-soft:#DEE8ED;
+    --line: rgba(35,41,31,0.16);
+    --font-display: 'Alfa Slab One', serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(35,41,31,0.06) 1px, transparent 0);
+    background-size: 18px 18px;
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.45;
+    min-height:100vh;
+  }
+
+  a{ color:inherit; }
+
+  :focus-visible{
+    outline: 3px solid var(--steel);
+    outline-offset: 2px;
+  }
+
+  .wrap{
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+  }
+
+  /* ---------- header / signpost ---------- */
+  header.board{
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 14px;
+    padding: 20px 18px 18px;
+    position: relative;
+    box-shadow: 0 10px 0 rgba(35,41,31,0.12);
+  }
+  header.board::before{
+    content:"";
+    position:absolute;
+    left: 26px; top: -9px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 200px 0 0 var(--gold);
+  }
+  h1{
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(1.7rem, 7vw, 2.2rem);
+    letter-spacing: 0.5px;
+    margin: 6px 0 2px;
+  }
+  .tagline{
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--gold);
+    margin: 0 0 16px;
+  }
+
+  .location-row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    font-size:0.92rem;
+  }
+  .location-row #locationLabel{ font-weight:600; }
+  .ghost-btn{
+    background:none;
+    border:1px solid rgba(239,232,214,0.4);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border-radius: 100px;
+    cursor:pointer;
+  }
+  .ghost-btn:hover{ border-color: var(--gold); color: var(--gold); }
+
+  .search-panel{
+    display:none;
+    margin-top:12px;
+    gap:8px;
+  }
+  .search-panel.open{ display:flex; }
+  .search-panel input[type="text"]{
+    flex:1;
+    min-width:0;
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid transparent;
+    font-family:var(--font-body);
+    font-size:0.95rem;
+  }
+  .search-panel button{
+    background:var(--gold);
+    color:var(--ink);
+    border:none;
+    font-weight:600;
+    padding:0 14px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:0.9rem;
+  }
+
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid rgba(239,232,214,0.2);
+    font-size:0.85rem;
+    gap: 10px;
+  }
+  .toggle-row label{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .unit-switch{
+    display:flex;
+    background: rgba(239,232,214,0.12);
+    border-radius: 100px;
+    padding: 3px;
+  }
+  .unit-switch button{
+    border:none;
+    background:none;
+    color: rgba(239,232,214,0.6);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 5px 11px;
+    border-radius: 100px;
+    cursor:pointer;
+  }
+  .unit-switch button.active{
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  #statusMsg{
+    font-size:0.85rem;
+    margin-top:10px;
+    color: var(--gold);
+    min-height: 1.2em;
+  }
+
+  /* ---------- cards ---------- */
+  main{ margin-top: 22px; display:flex; flex-direction:column; gap:16px; }
+
+  .card{
+    background: var(--paper-raised);
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    padding: 18px 18px 20px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: rise 0.5s ease forwards;
+  }
+  .card:nth-of-type(1){ animation-delay: 0.05s; }
+  .card:nth-of-type(2){ animation-delay: 0.12s; }
+  .card:nth-of-type(3){ animation-delay: 0.19s; }
+  .card:nth-of-type(4){ animation-delay: 0.26s; }
+  .card:nth-of-type(5){ animation-delay: 0.33s; }
+
+  /* ---------- pack panel (who's walking) ---------- */
+  .dog-count-row{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px; font-size:0.92rem; font-weight:600;
+  }
+  .stepper{
+    display:flex; align-items:center; gap:2px;
+    background: var(--paper); border-radius:100px; border:1px solid var(--line);
+  }
+  .stepper button{
+    width:30px; height:30px; border-radius:50%; border:none; background:none;
+    font-size:1.15rem; font-family:var(--font-mono); cursor:pointer; color:var(--ink);
+  }
+  .stepper button:hover{ color:var(--brick); }
+  .stepper span{ min-width:22px; text-align:center; font-family:var(--font-mono); font-weight:700; }
+
+  .dog-profiles{ display:flex; flex-direction:column; gap:12px; }
+
+  .dog-tag-form{
+    position:relative;
+    background: var(--paper);
+    border: 1.5px dashed var(--line);
+    border-radius: 10px;
+    padding: 14px 14px 14px;
+  }
+  .dog-tag-form::before{
+    content:"";
+    position:absolute;
+    top:-6px; left:16px;
+    width:11px; height:11px;
+    border-radius:50%;
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line);
+  }
+  .dog-tag-header{
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .paw-mini{ width:18px; height:18px; color:var(--gold); flex:none; }
+  .dog-name-input{
+    border:none; border-bottom:1.5px solid var(--line); background:none;
+    font-family:var(--font-body); font-weight:600; font-size:0.95rem;
+    padding:2px 2px 5px; flex:1; min-width:0; color:var(--ink);
+  }
+  .dog-name-input:focus{ border-bottom-color:var(--steel); }
+
+  .dog-tag-fields{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;
+  }
+  .dog-tag-fields label{
+    display:flex; flex-direction:column; gap:4px;
+    font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;
+    color: rgba(35,41,31,0.55);
+  }
+  .dog-tag-fields select{
+    font-family:var(--font-body); font-size:0.86rem; padding:7px 8px;
+    border-radius:6px; border:1px solid var(--line); background:var(--paper-raised); color:var(--ink);
+  }
+  .dog-tag-checks{
+    display:flex; flex-direction:column; gap:6px; font-size:0.84rem;
+  }
+  .dog-tag-checks label{ display:flex; align-items:center; gap:8px; }
+  @keyframes rise{ to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){
+    .card{ animation: none; opacity:1; transform:none; }
+  }
+
+  .card-head{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom: 12px;
+  }
+  .tag{
+    flex:none;
+    width:38px; height:38px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    border: 2px solid currentColor;
+  }
+  .tag svg{ width:20px; height:20px; }
+  .tag.c-steel{ color:var(--steel); background:var(--steel-soft); }
+  .tag.c-gold{ color:var(--gold); background:var(--gold-soft); }
+  .tag.c-green{ color:var(--green); background:var(--green-soft); }
+  .tag.c-brick{ color:var(--brick); background:var(--brick-soft); }
+
+  .card-eyebrow{
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: rgba(35,41,31,0.55);
+    margin: 0 0 2px;
+  }
+  .card-title{
+    font-family: var(--font-display);
+    font-weight:400;
+    font-size: 1.15rem;
+    margin: 0;
+  }
+
+  .big-stat{
+    font-family: var(--font-mono);
+    font-weight:700;
+    font-size: 3.1rem;
+    line-height:1;
+    margin: 4px 0 2px;
+  }
+  .sub-stat{
+    font-size:0.92rem;
+    color: rgba(35,41,31,0.75);
+    margin-bottom: 10px;
+  }
+
+  .meta-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:8px 14px;
+    font-size:0.86rem;
+    margin-top: 10px;
+    padding-top:10px;
+    border-top:1px dashed var(--line);
+  }
+  .meta-grid dt{ color: rgba(35,41,31,0.55); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.6px; }
+  .meta-grid dd{ margin:0; font-family:var(--font-mono); font-weight:700; }
+
+  .verdict{
+    display:inline-block;
+    font-family: var(--font-mono);
+    font-weight:700;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    border-radius: 100px;
+    margin-bottom: 10px;
+  }
+  .verdict.good{ background:var(--green-soft); color:var(--green); }
+  .verdict.caution{ background:var(--gold-soft); color:#8a6416; }
+  .verdict.bad{ background:var(--brick-soft); color:var(--brick); }
+
+  .why{
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.92rem;
+  }
+  .why li{ margin-bottom: 4px; }
+
+  /* ---------- pavement gauge (signature element) ---------- */
+  .gauge{
+    margin: 14px 0 6px;
+  }
+  .gauge-track{
+    position:relative;
+    height: 14px;
+    border-radius: 100px;
+    background: linear-gradient(90deg,
+      var(--steel) 0%, var(--green) 22%, var(--gold) 55%, var(--brick) 82%, #7a2413 100%);
+  }
+  .gauge-marker{
+    position:absolute;
+    top: -11px;
+    width: 34px; height: 34px;
+    margin-left: -17px;
+    transition: left 0.6s ease;
+  }
+  .gauge-marker svg{ width:100%; height:100%; color: var(--ink); filter: drop-shadow(0 2px 1px rgba(0,0,0,0.25)); }
+  .gauge-labels{
+    display:flex;
+    justify-content:space-between;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    color: rgba(35,41,31,0.55);
+    margin-top: 16px;
+  }
+  .gauge-labels span{ flex:1; text-align:center; }
+  .gauge-labels span:first-child{ text-align:left; }
+  .gauge-labels span:last-child{ text-align:right; }
+
+  .sensitive-note{
+    font-size:0.78rem;
+    color: var(--steel);
+    margin-top:8px;
+    font-style: italic;
+  }
+
+  footer{
+    margin-top: 26px;
+    text-align:center;
+    font-size: 0.78rem;
+    color: rgba(35,41,31,0.55);
+  }
+  footer a{ color:var(--steel); }
+  #refreshBtn{
+    margin-top:10px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding: 9px 16px;
+    border-radius: 100px;
+    font-family:var(--font-body);
+    font-size:0.85rem;
+    font-weight:600;
+    cursor:pointer;
+  }
+
+  .skeleton{ color: rgba(35,41,31,0.35); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="board">
+    <p class="tagline">Trailhead briefing</p>
+    <h1>Pawcast</h1>
+    <div class="location-row">
+      <span>📍</span>
+      <span id="locationLabel">Finding you…</span>
+      <button class="ghost-btn" id="changeLocationBtn" type="button">Change location</button>
+    </div>
+
+    <form class="search-panel" id="searchPanel">
+      <input type="text" id="cityInput" placeholder="e.g. Chicago, IL" autocomplete="off" />
+      <button type="submit">Go</button>
+    </form>
+
+    <div class="toggle-row">
+      <span>Set up your pack below to fine-tune the checks</span>
+      <div class="unit-switch" role="group" aria-label="Temperature unit">
+        <button type="button" id="unitF" class="active">°F</button>
+        <button type="button" id="unitC">°C</button>
+      </div>
+    </div>
+
+    <p id="statusMsg" aria-live="polite"></p>
+  </header>
+
+  <main id="cards">
+    <!-- Pack panel: who's coming on the walk -->
+    <section class="card" aria-labelledby="packTitle">
+      <div class="card-head">
+        <span class="tag c-gold">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="16.5" rx="6" ry="4.4"/><circle cx="5.6" cy="8" r="2.2"/><circle cx="10.5" cy="4.6" r="2.2"/><circle cx="15.5" cy="4.6" r="2.2"/><circle cx="20" cy="8" r="2.2"/></svg>
+        </span>
+        <div>
+          <p class="card-eyebrow">Before we check the weather</p>
+          <h2 class="card-title" id="packTitle">Who's walking today?</h2>
+        </div>
+      </div>
+
+      <div class="dog-count-row">
+        <span>Number of dogs</span>
+        <div class="stepper">
+          <button type="button" id="dogCountMinus" aria-label="Fewer dogs">−</button>
+          <span id="dogCountDisplay">1</span>
+          <button type="button" id="dogCountPlus" aria-label="More dogs">+</button>
+        </div>
+      </div>
+
+      <div id="dogProfiles" class="dog-profiles"></div>
+    </section>
+
+    <!-- Card 1: current temperature -->
+    <section class="card" aria-labelledby="tempTitle">
+      <div class="card-head">
+        <span class="tag c-steel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14.5V5a2 2 0 0 0-4 0v9.5a4 4 0 1 0 4 0Z"/></svg>
+        </span>
+        <div>
+          <p class="card-eyebrow">Right now</p>
+          <h2 class="card-title" id="tempTitle">Current temperature</h2>
+        </div>
+      </div>
+      <div class="big-stat skeleton" id="tempBig">—°</div>
+      <p class="sub-stat" id="tempSub">Loading conditions…</p>
+      <dl class="meta-grid">
+        <dt>Feels like</dt><dd id="tempFeels">—</dd>
+        <dt>Humidity</dt><dd id="tempHumidity">—</dd>
+        <dt>Wind</dt><dd id="tempWind">—</dd>
+        <dt>Sky</dt><dd id="tempSky">—</dd>
+      </dl>
+    </section>
+
+    <!-- Card 2: umbrella / raincoat -->
+    <section class="card" aria-labelledby="rainTitle">
+      <div class="card-head">
+        <span class="tag c-gold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a4 4 0 0 1 1-7.9A6 6 0 0 1 17 8a3.5 3.5 0 0 1-1 6.9H5Z"/><path d="M8 18v1M12 18v2M16 18v1"/></svg>
+        </span>
+        <div>
+          <p class="card-eyebrow">Next few hours</p>
+          <h2 class="card-title" id="rainTitle">Umbrella check</h2>
+        </div>
+      </div>
+      <p class="verdict skeleton" id="rainVerdict">Checking…</p>
+      <ul class="why" id="rainWhy"><li>Loading forecast…</li></ul>
+    </section>
+
+    <!-- Card 3: dog walk suitability -->
+    <section class="card" aria-labelledby="walkTitle">
+      <div class="card-head">
+        <span class="tag c-green">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="16.5" rx="6" ry="4.4"/><circle cx="5.6" cy="8" r="2.2"/><circle cx="10.5" cy="4.6" r="2.2"/><circle cx="15.5" cy="4.6" r="2.2"/><circle cx="20" cy="8" r="2.2"/></svg>
+        </span>
+        <div>
+          <p class="card-eyebrow">1–2 hour walk</p>
+          <h2 class="card-title" id="walkTitle">Good time for a walk?</h2>
+        </div>
+      </div>
+      <p class="verdict skeleton" id="walkVerdict">Checking…</p>
+      <ul class="why" id="walkWhy"><li>Loading forecast…</li></ul>
+      <p class="sensitive-note" id="walkSensitiveNote" style="display:none;"></p>
+    </section>
+
+    <!-- Card 4: heat effect right now -->
+    <section class="card" aria-labelledby="heatTitle">
+      <div class="card-head">
+        <span class="tag c-brick">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg>
+        </span>
+        <div>
+          <p class="card-eyebrow">Right now</p>
+          <h2 class="card-title" id="heatTitle">Will the heat get to them?</h2>
+        </div>
+      </div>
+      <p class="verdict skeleton" id="heatVerdict">Checking…</p>
+      <div class="gauge">
+        <div class="gauge-track">
+          <div class="gauge-marker" id="gaugeMarker" style="left:0%;">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="16.5" rx="6" ry="4.4"/><circle cx="5.6" cy="8" r="2.2"/><circle cx="10.5" cy="4.6" r="2.2"/><circle cx="15.5" cy="4.6" r="2.2"/><circle cx="20" cy="8" r="2.2"/></svg>
+          </div>
+        </div>
+        <div class="gauge-labels">
+          <span>Cool</span><span>Warm</span><span>Getting hot</span><span>Hot pavement</span><span>Frying an egg</span>
+        </div>
+      </div>
+      <ul class="why" id="heatWhy"><li>Loading forecast…</li></ul>
+      <p class="sensitive-note" id="heatSensitiveNote" style="display:none;"></p>
+    </section>
+  </main>
+
+  <footer>
+    <button id="refreshBtn" type="button">Refresh</button>
+    <p>Last updated <span id="updatedAt">—</span> · Weather data from <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a></p>
+    <p>General guidance only — always go by how your own dog is doing, not just the numbers.</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- state ----------
+  let unit = "F"; // display unit only; all thresholds computed in Fahrenheit
+  let dogs = [ freshDog() ]; // per-dog profiles, drives the caution thresholds
+  let lastPayload = null; // { current, hourly, idx }
+  let lastPlaceName = "";
+  let lastCoords = null; // { lat, lon }
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- weather code helpers ----------
+  const DESC = {
+    0:"Clear sky",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",
+    45:"Foggy",48:"Freezing fog",
+    51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",
+    56:"Freezing drizzle",57:"Freezing drizzle",
+    61:"Light rain",63:"Rain",65:"Heavy rain",
+    66:"Freezing rain",67:"Freezing rain",
+    71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",
+    80:"Rain showers",81:"Rain showers",82:"Heavy rain showers",
+    85:"Snow showers",86:"Heavy snow showers",
+    95:"Thunderstorm",96:"Thunderstorm with hail",99:"Thunderstorm with hail"
+  };
+  const SNOW = [71,73,75,77,85,86];
+  const STORM = [95,96,99];
+  const RAIN = [51,53,55,56,57,61,63,65,66,67,80,81,82];
+
+  function describe(code){ return DESC[code] || "Unsettled"; }
+
+  // ---------- pack (dog profiles) ----------
+  function freshDog(){ return { name:"", breed:"", size:"medium", coat:"average", flatFaced:false, senior:false }; }
+
+  function escapeAttr(s){
+    return String(s || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  }
+
+  // Breed guide: [display name, typical size, typical coat, flat-faced?, bred-for-cold-climates?]
+  // "Bred for cold climates" adds extra heat sensitivity beyond a generic thick coat, and extra
+  // cold hardiness — it's a real physiological difference, not just visible coat thickness.
+  const BREED_DATA = [
+    ["Siberian Husky","large","thick",0,1],["Alaskan Malamute","large","thick",0,1],
+    ["Samoyed","medium","thick",0,1],["Saint Bernard","large","thick",0,1],
+    ["Bernese Mountain Dog","large","thick",0,1],["Newfoundland","large","thick",0,1],
+    ["Great Pyrenees","large","thick",0,1],["Leonberger","large","thick",0,1],
+    ["Tibetan Mastiff","large","thick",0,1],["Akita","large","thick",0,1],
+    ["Chow Chow","medium","thick",0,1],["Norwegian Elkhound","medium","thick",0,1],
+    ["American Eskimo Dog","medium","thick",0,1],
+    ["Old English Sheepdog","large","thick",0,0],["Rough Collie","large","thick",0,0],
+    ["Pomeranian","small","thick",0,0],["Shiba Inu","small","thick",0,0],
+    ["German Shepherd","large","thick",0,0],["Golden Retriever","large","thick",0,0],
+    ["Australian Shepherd","medium","thick",0,0],["Border Collie","medium","thick",0,0],
+    ["Pembroke Welsh Corgi","small","thick",0,0],["Cardigan Welsh Corgi","small","thick",0,0],
+    ["Shetland Sheepdog","small","thick",0,0],
+    ["Labrador Retriever","large","average",0,0],["Rottweiler","large","average",0,0],
+    ["Belgian Malinois","large","average",0,0],["Australian Cattle Dog","medium","average",0,0],
+    ["Beagle","medium","average",0,0],["Cocker Spaniel","medium","average",0,0],
+    ["Springer Spaniel","medium","average",0,0],["Brittany","medium","average",0,0],
+    ["Jack Russell Terrier","small","average",0,0],["Miniature Schnauzer","small","average",0,0],
+    ["West Highland White Terrier","small","average",0,0],["Cairn Terrier","small","average",0,0],
+    ["Scottish Terrier","small","average",0,0],["Bloodhound","large","average",0,0],
+    ["Irish Setter","large","average",0,0],["Irish Wolfhound","large","average",0,0],
+    ["Cane Corso","large","average",0,0],["Basset Hound","medium","average",0,0],
+    ["Dachshund","small","average",0,0],["Yorkshire Terrier","small","average",0,0],
+    ["Maltese","small","average",0,0],["Havanese","small","average",0,0],
+    ["Bichon Frise","small","average",0,0],["Papillon","small","average",0,0],
+    ["Cavalier King Charles Spaniel","small","average",1,0],
+    ["Standard Poodle","large","thick",0,0],["Miniature Poodle","small","thick",0,0],
+    ["Toy Poodle","small","thick",0,0],["Portuguese Water Dog","medium","thick",0,0],
+    ["Doberman Pinscher","large","thin",0,0],["Vizsla","medium","thin",0,0],
+    ["Weimaraner","large","thin",0,0],["Basenji","small","thin",0,0],
+    ["Bull Terrier","medium","thin",0,0],["Staffordshire Bull Terrier","medium","thin",0,0],
+    ["American Pit Bull Terrier","medium","thin",0,0],["Rhodesian Ridgeback","large","thin",0,0],
+    ["Greyhound","large","thin",0,0],["Whippet","medium","thin",0,0],
+    ["Italian Greyhound","small","thin",0,0],["Dalmatian","large","thin",0,0],
+    ["Great Dane","large","thin",0,0],["Mastiff","large","thin",0,0],
+    ["Bullmastiff","large","thin",0,0],["Shar Pei","medium","thin",0,0],
+    ["Chihuahua","small","thin",0,0],["Miniature Pinscher","small","thin",0,0],
+    ["Xoloitzcuintli","medium","thin",0,0],
+    ["Boxer","medium","thin",1,0],["Pug","small","thin",1,0],
+    ["French Bulldog","small","thin",1,0],["English Bulldog","medium","thin",1,0],
+    ["Boston Terrier","small","thin",1,0],["Shih Tzu","small","average",1,0],
+    ["Pekingese","small","average",1,0],["Lhasa Apso","small","average",1,0],
+    ["Japanese Chin","small","average",1,0],["Brussels Griffon","small","average",1,0]
+  ];
+  const BREEDS = {};
+  BREED_DATA.forEach(([name,size,coat,flat,cold]) => {
+    BREEDS[name.toLowerCase()] = { display:name, size, coat, flatFaced: !!flat, coldClimate: !!cold };
+  });
+
+  function lookupBreed(text){
+    const norm = String(text || "").trim().toLowerCase();
+    if (!norm) return null;
+    if (BREEDS[norm]) return BREEDS[norm];
+    let bestKey = null;
+    Object.keys(BREEDS).forEach((key) => {
+      if (norm.includes(key) && (!bestKey || key.length > bestKey.length)) bestKey = key;
+    });
+    return bestKey ? BREEDS[bestKey] : null;
+  }
+
+  // When a breed is recognized, suggest size/coat/flat-faced — the person can still edit them.
+  function applyBreedAutofill(i, formEl){
+    const d = dogs[i];
+    const noteEl = formEl.querySelector('[data-role="breed-note"]');
+    if (!d.breed || !d.breed.trim()){ noteEl.textContent = ""; return; }
+    const info = lookupBreed(d.breed);
+    if (info){
+      d.size = info.size; d.coat = info.coat; d.flatFaced = info.flatFaced;
+      formEl.querySelector(".dog-size").value = info.size;
+      formEl.querySelector(".dog-coat").value = info.coat;
+      formEl.querySelector(".dog-flatfaced").checked = info.flatFaced;
+      const bits = [`${info.size} build`, `typically ${info.coat === "thick" ? "a thick double-coat" : info.coat === "thin" ? "a short, thin coat" : "an average coat"} — edit below if yours differs`];
+      if (info.flatFaced) bits.push("flat-faced, so extra heat risk applies");
+      if (info.coldClimate) bits.push("bred for cold climates, so it runs extra heat-sensitive and extra cold-hardy");
+      noteEl.textContent = "Matched: " + bits.join(" · ") + ".";
+    } else {
+      noteEl.textContent = "Not in our breed guide — set size and coat manually below.";
+    }
+  }
+
+  function syncDogCount(count){
+    count = clamp(count, 1, 6);
+    while (dogs.length < count) dogs.push(freshDog());
+    dogs.length = count;
+    $("dogCountDisplay").textContent = count;
+    renderDogProfiles();
+    render();
+  }
+
+  function renderDogProfiles(){
+    const container = $("dogProfiles");
+    container.innerHTML = dogs.map((d,i) => dogTagHTML(d,i)).join("");
+    container.querySelectorAll(".dog-tag-form").forEach((el) => {
+      const i = Number(el.dataset.index);
+      el.querySelector(".dog-breed-input").addEventListener("input", (e) => { dogs[i].breed = e.target.value; applyBreedAutofill(i, el); render(); });
+      el.querySelector(".dog-name-input").addEventListener("input", (e) => { dogs[i].name = e.target.value; render(); });
+      el.querySelector(".dog-size").addEventListener("change", (e) => { dogs[i].size = e.target.value; render(); });
+      el.querySelector(".dog-coat").addEventListener("change", (e) => { dogs[i].coat = e.target.value; render(); });
+      el.querySelector(".dog-flatfaced").addEventListener("change", (e) => { dogs[i].flatFaced = e.target.checked; render(); });
+      el.querySelector(".dog-senior").addEventListener("change", (e) => { dogs[i].senior = e.target.checked; render(); });
+    });
+  }
+
+  function dogTagHTML(d, i){
+    return `<div class="dog-tag-form" data-index="${i}">
+      <div class="dog-tag-header">
+        <svg class="paw-mini" viewBox="0 0 24 24"><ellipse cx="12" cy="16.5" rx="6" ry="4.4"/><circle cx="5.6" cy="8" r="2.2"/><circle cx="10.5" cy="4.6" r="2.2"/><circle cx="15.5" cy="4.6" r="2.2"/><circle cx="20" cy="8" r="2.2"/></svg>
+        <input type="text" class="dog-name-input" placeholder="Dog ${i+1}'s name (optional)" maxlength="20" value="${escapeAttr(d.name)}" />
+      </div>
+      <div class="dog-breed-row">
+        <label class="breed-label">Breed
+          <input type="text" class="dog-breed-input" list="breedOptions" placeholder="e.g. Siberian Husky" maxlength="40" value="${escapeAttr(d.breed)}" />
+        </label>
+        <p class="breed-note" data-role="breed-note"></p>
+      </div>
+      <div class="dog-tag-fields">
+        <label>Size
+          <select class="dog-size">
+            <option value="small" ${d.size==='small'?'selected':''}>Small (under 20 lb)</option>
+            <option value="medium" ${d.size==='medium'?'selected':''}>Medium (20–60 lb)</option>
+            <option value="large" ${d.size==='large'?'selected':''}>Large (60 lb+)</option>
+          </select>
+        </label>
+        <label>Coat
+          <select class="dog-coat">
+            <option value="thin" ${d.coat==='thin'?'selected':''}>Short & thin</option>
+            <option value="average" ${d.coat==='average'?'selected':''}>Average</option>
+            <option value="thick" ${d.coat==='thick'?'selected':''}>Thick double-coat</option>
+          </select>
+        </label>
+      </div>
+      <div class="dog-tag-checks">
+        <label><input type="checkbox" class="dog-flatfaced" ${d.flatFaced?'checked':''} /> Flat-faced (pug, bulldog, boxer…)</label>
+        <label><input type="checkbox" class="dog-senior" ${d.senior?'checked':''} /> Senior (7+) or under 6 months</label>
+      </div>
+    </div>`;
+  }
+
+  function dogLabel(d, i){ return (d.name && d.name.trim()) || `Dog ${i+1}`; }
+  function dogNames(){ return dogs.map(dogLabel); }
+  function joinNames(names){
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return names[0] + " and " + names[1];
+    return names.slice(0,-1).join(", ") + ", and " + names[names.length-1];
+  }
+  function packSubject(){
+    return dogs.length <= 3 ? joinNames(dogNames()) : `all ${dogs.length} dogs`;
+  }
+
+  // Heat/cold sensitivity scoring per dog; the most sensitive dog in the
+  // group sets the bar, since the whole pack walks together.
+  function computePackProfile(){
+    let heatScore = 0, coldScore = 0, heatDogIdx = 0, coldDogIdx = 0;
+    dogs.forEach((d, i) => {
+      let h = 0, c = 0;
+      if (d.flatFaced) h += 2;
+      if (d.coat === "thick") h += 1;
+      if (d.senior) { h += 1; c += 1; }
+      if (d.size === "large") h += 1;
+      if (d.size === "small") { h += 1; c += 1; }
+      if (d.coat === "thin") c += 1;
+      if (d.coat === "thick") c -= 1;
+      if (h > heatScore){ heatScore = h; heatDogIdx = i; }
+      if (c > coldScore){ coldScore = c; coldDogIdx = i; }
+    });
+    return { heatScore, coldScore, heatDogIdx, coldDogIdx };
+  }
+  function heatShiftFor(score){ return score >= 2 ? 8 : score === 1 ? 4 : 0; }
+  function coldShiftFor(score){ return score >= 2 ? 10 : score === 1 ? 5 : 0; }
+  function heatReasonTags(d){
+    const tags = [];
+    if (d.flatFaced) tags.push("flat-faced");
+    if (d.coat === "thick") tags.push("thick coat");
+    if (d.senior) tags.push("senior or young");
+    if (d.size === "large") tags.push("large breed");
+    return tags;
+  }
+  function coldReasonTags(d){
+    const tags = [];
+    if (d.size === "small") tags.push("small breed");
+    if (d.coat === "thin") tags.push("thin coat");
+    if (d.senior) tags.push("senior or young");
+    return tags;
+  }
+
+  // ---------- unit display ----------
+  function fmtTemp(fVal){
+    if (fVal === null || fVal === undefined) return "—";
+    if (unit === "F") return Math.round(fVal) + "°F";
+    const c = (fVal - 32) * 5/9;
+    return Math.round(c) + "°C";
+  }
+
+  // ---------- time helpers ----------
+  function nearestHourIndex(times){
+    const now = Date.now();
+    let bestIdx = 0, bestDiff = Infinity;
+    times.forEach((t,i) => {
+      const diff = Math.abs(new Date(t).getTime() - now);
+      if (diff < bestDiff){ bestDiff = diff; bestIdx = i; }
+    });
+    return bestIdx;
+  }
+
+  // ---------- fetch ----------
+  async function fetchForecast(lat, lon, label){
+    setStatus("Fetching the forecast…");
+    try{
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+        `&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m` +
+        `&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code` +
+        `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=2`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Weather service error (" + res.status + ")");
+      const data = await res.json();
+      const idx = nearestHourIndex(data.hourly.time);
+      lastPayload = { current: data.current, hourly: data.hourly, idx };
+      lastPlaceName = label;
+      lastCoords = { lat, lon };
+      $("locationLabel").textContent = label;
+      render();
+      setStatus("");
+      $("updatedAt").textContent = new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    } catch(err){
+      console.error(err);
+      setStatus("Couldn't load weather data. Check your connection and try refreshing.");
+    }
+  }
+
+  async function geocodeCity(query){
+    setStatus("Looking up that location…");
+    try{
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.results || !data.results.length){
+        setStatus("Couldn't find that place. Try a nearby city name.");
+        return;
+      }
+      const r = data.results[0];
+      const label = [r.name, r.admin1, r.country].filter(Boolean).join(", ");
+      fetchForecast(r.latitude, r.longitude, label);
+    } catch(err){
+      console.error(err);
+      setStatus("Couldn't look up that place. Try again.");
+    }
+  }
+
+  function useGeolocation(){
+    if (!navigator.geolocation){
+      $("locationLabel").textContent = "Location unavailable";
+      openSearch("Your browser can't share your location — search for a city instead.");
+      return;
+    }
+    setStatus("Asking your browser for your location…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => fetchForecast(pos.coords.latitude, pos.coords.longitude, "Your location"),
+      (err) => {
+        console.warn(err);
+        $("locationLabel").textContent = "Location not shared";
+        openSearch("Location access was blocked — search for a city instead.");
+      },
+      { timeout: 8000 }
+    );
+  }
+
+  function openSearch(msg){
+    $("searchPanel").classList.add("open");
+    if (msg) setStatus(msg);
+  }
+
+  function setStatus(msg){ $("statusMsg").textContent = msg || ""; }
+
+  // ---------- rendering ----------
+  function render(){
+    if (!lastPayload) return;
+    const { current, hourly, idx } = lastPayload;
+
+    // Card 1 — current temperature
+    $("tempBig").textContent = fmtTemp(current.temperature_2m);
+    $("tempBig").classList.remove("skeleton");
+    $("tempSub").textContent = describe(current.weather_code);
+    $("tempFeels").textContent = fmtTemp(current.apparent_temperature);
+    $("tempHumidity").textContent = Math.round(current.relative_humidity_2m) + "%";
+    $("tempWind").textContent = Math.round(current.wind_speed_10m) + " mph";
+    $("tempSky").textContent = describe(current.weather_code);
+
+    // Card 2 — umbrella check, next 4 hours
+    const rainWindow = sliceSafe(idx, 4);
+    const probs = rainWindow.map(i => hourly.precipitation_probability[i] ?? 0);
+    const amounts = rainWindow.map(i => hourly.precipitation[i] ?? 0);
+    const codes = rainWindow.map(i => hourly.weather_code[i]);
+    const maxProb = Math.max(0, ...probs);
+    const totalAmt = amounts.reduce((a,b)=>a+b,0);
+    const anySnow = codes.some(c => SNOW.includes(c));
+    const anyStorm = codes.some(c => STORM.includes(c));
+
+    let rTier, rText, rWhy;
+    if (anyStorm || maxProb >= 60){
+      rTier = "bad";
+      rText = anySnow ? "Grab boots and a warm coat." : "Bring it.";
+      rWhy = [
+        `Up to ${Math.round(maxProb)}% chance of ${anySnow ? "snow" : "rain"} in the next 4 hours.`,
+        totalAmt > 0 ? `About ${totalAmt.toFixed(2)}" expected.` : "Conditions can turn quickly.",
+        anyStorm ? "Thunderstorms are possible — plan around them." : "A raincoat beats getting soaked."
+      ];
+    } else if (maxProb >= 30){
+      rTier = "caution";
+      rText = "Pack it just in case.";
+      rWhy = [
+        `${Math.round(maxProb)}% chance of ${anySnow ? "snow" : "precipitation"} in the next 4 hours.`,
+        "Not a sure thing, but worth having on hand."
+      ];
+    } else {
+      rTier = "good";
+      rText = "Leave it home.";
+      rWhy = [
+        `Only ${Math.round(maxProb)}% chance of precipitation in the next 4 hours.`,
+        "Should stay dry."
+      ];
+    }
+    setVerdict("rainVerdict", rTier, rText);
+    setWhy("rainWhy", rWhy);
+
+    // Card 3 — 1-2 hour dog walk
+    const walkWindow = sliceSafe(idx, 2);
+    const feelsVals = walkWindow.map(i => hourly.apparent_temperature[i]);
+    const walkProbs = walkWindow.map(i => hourly.precipitation_probability[i] ?? 0);
+    const walkCodes = walkWindow.map(i => hourly.weather_code[i]);
+    const minFeels = Math.min(...feelsVals);
+    const maxFeels = Math.max(...feelsVals);
+    const walkMaxProb = Math.max(0, ...walkProbs);
+    const walkStorm = walkCodes.some(c => STORM.includes(c)) || STORM.includes(current.weather_code);
+
+    const pack = computePackProfile();
+    const walkHeatShift = heatShiftFor(pack.heatScore);
+    const walkColdShift = coldShiftFor(pack.coldScore);
+    const coldFloor = 20 + walkColdShift;
+    const cautionColdFloor = 30 + walkColdShift;
+    const hotCeil = 90 - walkHeatShift;
+    const cautionHotCeil = 80 - walkHeatShift;
+    const subject = packSubject();
+
+    let wTier, wText, wWhy = [];
+    if (walkStorm || walkMaxProb >= 60 || minFeels < coldFloor || maxFeels > hotCeil){
+      wTier = "bad";
+      wText = "Better to wait.";
+      if (walkStorm) wWhy.push("Thunderstorms are in the mix — not safe to be out in open ground.");
+      if (walkMaxProb >= 60) wWhy.push(`${Math.round(walkMaxProb)}% chance of precipitation over the next 2 hours.`);
+      if (minFeels < coldFloor) wWhy.push(`Feels-like drops to ${fmtTemp(minFeels)} — risk of frostbite on paws and ears.`);
+      if (maxFeels > hotCeil) wWhy.push(`Feels-like climbs to ${fmtTemp(maxFeels)} — real heatstroke risk for ${subject} on a long walk.`);
+    } else if (walkMaxProb >= 30 || minFeels < cautionColdFloor || maxFeels > cautionHotCeil){
+      wTier = "caution";
+      wText = "Proceed with caution.";
+      if (walkMaxProb >= 30) wWhy.push(`${Math.round(walkMaxProb)}% chance of rain — keep the walk shorter or bring gear.`);
+      if (minFeels < cautionColdFloor) wWhy.push(`Feels-like near ${fmtTemp(minFeels)} — fine for a while, watch ${subject} for shivering or lifted paws.`);
+      if (maxFeels > cautionHotCeil) wWhy.push(`Feels-like near ${fmtTemp(maxFeels)} — stick to shade and bring water for ${subject}.`);
+    } else {
+      wTier = "good";
+      wText = "Good to go.";
+      wWhy.push(`Feels-like stays between ${fmtTemp(minFeels)} and ${fmtTemp(maxFeels)} for the next 2 hours.`);
+      wWhy.push(`Low chance of rain and nothing extreme in the swing — a fine window for ${subject}.`);
+    }
+    setVerdict("walkVerdict", wTier, wText);
+    setWhy("walkWhy", wWhy);
+    if (pack.heatScore > 0 || pack.coldScore > 0){
+      const bits = [];
+      if (pack.heatScore > 0) bits.push(`${dogLabel(dogs[pack.heatDogIdx], pack.heatDogIdx)} (${heatReasonTags(dogs[pack.heatDogIdx]).join(", ")}) sets a lower heat ceiling`);
+      if (pack.coldScore > 0) bits.push(`${dogLabel(dogs[pack.coldDogIdx], pack.coldDogIdx)} (${coldReasonTags(dogs[pack.coldDogIdx]).join(", ")}) sets a higher cold floor`);
+      $("walkSensitiveNote").textContent = bits.join(" · ") + " for the group.";
+      $("walkSensitiveNote").style.display = "block";
+    } else {
+      $("walkSensitiveNote").style.display = "none";
+    }
+
+    // Card 4 — heat right now (pavement gauge)
+    const feelsNow = current.apparent_temperature;
+    const heatShift = heatShiftFor(pack.heatScore);
+    const t1 = 70 - heatShift, t2 = 80 - heatShift, t3 = 90 - heatShift, t4 = 100 - heatShift;
+
+    let hTier, hText, hWhy;
+    if (feelsNow < t1){
+      hTier = "good"; hText = "No heat concern.";
+      hWhy = [`Feels like ${fmtTemp(feelsNow)} — pavement should be cool underfoot.`];
+    } else if (feelsNow < t2){
+      hTier = "good"; hText = "Comfortable.";
+      hWhy = [`Feels like ${fmtTemp(feelsNow)}.`, `Bring water along for ${subject} on anything over 30 minutes.`];
+    } else if (feelsNow < t3){
+      hTier = "caution"; hText = "Warming up.";
+      hWhy = [`Feels like ${fmtTemp(feelsNow)}.`, "Favor grass or shade over direct pavement.", `Watch ${subject} for heavy panting or slowing down.`];
+    } else if (feelsNow < t4){
+      hTier = "bad"; hText = "Hot pavement.";
+      hWhy = [`Feels like ${fmtTemp(feelsNow)}.`, "Press the back of your hand to the pavement for 5 seconds — if it's too hot for you, it's too hot for paws.", `Keep ${subject}'s walk short and shaded.`];
+    } else {
+      hTier = "bad"; hText = "Extreme heat.";
+      hWhy = [`Feels like ${fmtTemp(feelsNow)}.`, `Skip outdoor exercise for ${subject} until it cools down.`, "Sun-warmed pavement can run 40–60°F hotter than the air."];
+    }
+    setVerdict("heatVerdict", hTier, hText);
+    setWhy("heatWhy", hWhy);
+    if (pack.heatScore > 0){
+      const hd = dogs[pack.heatDogIdx];
+      $("heatSensitiveNote").textContent = `${dogLabel(hd, pack.heatDogIdx)} (${heatReasonTags(hd).join(", ")}) runs hotter than average, so this bar is set for them.`;
+      $("heatSensitiveNote").style.display = "block";
+    } else {
+      $("heatSensitiveNote").style.display = "none";
+    }
+
+    // gauge marker: map 50F..115F onto 0%..100%
+    const pct = clamp(((feelsNow - 50) / (115 - 50)) * 100, 2, 98);
+    $("gaugeMarker").style.left = pct + "%";
+  }
+
+  function sliceSafe(startIdx, count){
+    const out = [];
+    for (let i = startIdx; i < startIdx + count; i++) out.push(i);
+    return out;
+  }
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  function setVerdict(id, tier, text){
+    const el = $(id);
+    el.textContent = text;
+    el.classList.remove("skeleton","good","caution","bad");
+    el.classList.add(tier);
+  }
+  function setWhy(id, items){
+    $(id).innerHTML = items.map(t => `<li>${t}</li>`).join("");
+  }
+
+  // ---------- events ----------
+  $("changeLocationBtn").addEventListener("click", () => {
+    $("searchPanel").classList.toggle("open");
+  });
+  $("searchPanel").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = $("cityInput").value.trim();
+    if (val) geocodeCity(val);
+  });
+  $("dogCountMinus").addEventListener("click", () => syncDogCount(dogs.length - 1));
+  $("dogCountPlus").addEventListener("click", () => syncDogCount(dogs.length + 1));
+  $("unitF").addEventListener("click", () => setUnit("F"));
+  $("unitC").addEventListener("click", () => setUnit("C"));
+  function setUnit(u){
+    unit = u;
+    $("unitF").classList.toggle("active", u === "F");
+    $("unitC").classList.toggle("active", u === "C");
+    render();
+  }
+  $("refreshBtn").addEventListener("click", () => {
+    if (lastCoords){
+      fetchForecast(lastCoords.lat, lastCoords.lon, lastPlaceName);
+    } else {
+      useGeolocation();
+    }
+  });
+
+  // ---------- boot ----------
+  renderDogProfiles();
+  useGeolocation();
+})();
+</script>
+</body>
+</html>
